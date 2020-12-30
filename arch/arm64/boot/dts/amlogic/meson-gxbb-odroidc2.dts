@@ -451,7 +451,7 @@
 };
 
 &usb0_phy {
-	status = "disabled";
+	status = "okay";
 	phy-supply = <&vcc3v3>;
 };
 
@@ -461,7 +461,11 @@
 };
 
 &usb0 {
-	status = "disabled";
+	status = "okay";
+	dr_mode = "otg";
+	g-rx-fifo-size = <128>;
+	g-np-tx-fifo-size = <128>;
+	g-tx-fifo-size = <128 128 16 16 16>;
 	vbus-supply = <&usb_otg_pwr>;
 };
 
