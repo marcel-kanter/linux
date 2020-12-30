@@ -31,25 +31,6 @@
 		reg = <0x0 0x0 0x0 0x80000000>;
 	};
 
-	usb_otg_pwr: regulator-usb-pwrs {
-		compatible = "regulator-fixed";
-
-		regulator-name = "USB_OTG_PWR";
-
-		regulator-min-microvolt = <5000000>;
-		regulator-max-microvolt = <5000000>;
-
-		/*
-		 * signal name from schematics: PWREN
-		 */
-		gpio = <&gpio_ao GPIOAO_5 GPIO_ACTIVE_HIGH>;
-		enable-active-high;
-		/*
-		 * signal name from schematics: USB_POWER
-		 */
-		vin-supply = <&p5v0>;
-	};
-
 	leds {
 		compatible = "gpio-leds";
 		led-blue {
@@ -183,6 +164,36 @@
 		regulator-max-microvolt = <1500000>;
 		regulator-always-on;
 		/* U15 MP2161GJ-C499 */
+		vin-supply = <&p5v0>;
+	};
+
+	usb_hub_pwr: regulator-usb-hub-pwr {
+		compatible = "regulator-fixed";
+
+		regulator-name = "USB_HUB_PWR";
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
+		regulator-boot-on;
+
+		gpio = <&gpio_ao GPIOAO_4 GPIO_ACTIVE_HIGH>;
+		startup-delay-us = <10000>;
+		off-on-delay-us = <10000>;
+		enable-active-high;
+
+		vin-supply = <&p5v0>;
+	};
+
+	usb_otg_pwr: regulator-usb-otg-pwr {
+		compatible = "regulator-fixed";
+
+		regulator-name = "USB_OTG_PWR";
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
+		regulator-boot-on;
+
+		gpio = <&gpio_ao GPIOAO_5 GPIO_ACTIVE_HIGH>;
+		enable-active-high;
+
 		vin-supply = <&p5v0>;
 	};
 
@@ -441,18 +452,20 @@
 
 &usb0_phy {
 	status = "disabled";
-	phy-supply = <&usb_otg_pwr>;
+	phy-supply = <&vcc3v3>;
 };
 
 &usb1_phy {
 	status = "okay";
-	phy-supply = <&usb_otg_pwr>;
+	phy-supply = <&vcc3v3>;
 };
 
 &usb0 {
 	status = "disabled";
+	vbus-supply = <&usb_otg_pwr>;
 };
 
 &usb1 {
 	status = "okay";
+	vbus-supply = <&usb_hub_pwr>;
 };
