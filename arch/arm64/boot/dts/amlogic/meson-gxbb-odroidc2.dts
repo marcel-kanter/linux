@@ -261,6 +261,9 @@ Copyright (c) 2021, Marcel Kanter <marcel.kanter@googlemail.com>
 		resets = <&reset RESET_AIU>, <&reset RESET_AUDIN>;
 		reset-names = "aiu", "audin";
 
+		reg = <0x0 0xc1105400 0x0 0x2ac>, <0x0 0xc110a000 0x0 0x304>;
+		reg-names = "aiu", "audin";
+
 		status = "okay";
 	};
 };

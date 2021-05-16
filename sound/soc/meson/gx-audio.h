@@ -6,6 +6,7 @@ Copyright (c) 2021 Marcel Kanter <marcel.kanter@googlemail.com>
 #define _MESON_GX_AUDIO_H
 
 #include <linux/clk.h>
+#include <linux/regmap.h>
 
 
 #define AIU_CLK_I2S_PCLK 0
@@ -27,11 +28,15 @@ struct gx_audio
 {
 	struct clk *pclk;
 
+	struct regmap *aiu_regmap;
+
 	struct clk_bulk_data *aiu_i2s_clocks;
 	unsigned int aiu_i2s_num_clocks;
 
 	struct clk_bulk_data *aiu_spdif_clocks;
 	unsigned int aiu_spdif_num_clocks;
+
+	struct regmap *audin_regmap;
 
 	struct clk_bulk_data *audin_clocks;
 	unsigned int audin_num_clocks;
