@@ -232,6 +232,32 @@ Copyright (c) 2021, Marcel Kanter <marcel.kanter@googlemail.com>
 &{/soc} {
 	audio: audio-controller@c1105400 {
 		compatible = "amlogic,gx-audio";
+
+		clocks = <&clkc CLKID_AIU_GLUE>,
+			<&clkc CLKID_I2S_OUT>,
+			<&clkc CLKID_AOCLK_GATE>,
+			<&clkc CLKID_CTS_AMCLK>,
+			<&clkc CLKID_MIXER_IFACE>,
+			<&clkc CLKID_IEC958>,
+			<&clkc CLKID_IEC958_GATE>,
+			<&clkc CLKID_CTS_MCLK_I958>,
+			<&clkc CLKID_CTS_I958>,
+			<&clkc CLKID_ABUF>,
+			<&clkc CLKID_I2S_SPDIF>,
+			<&clkc CLKID_ADC>;
+		clock-names = "pclk",
+			"i2s_pclk",
+			"i2s_aoclk",
+			"i2s_mclk",
+			"i2s_mixer",
+			"spdif_pclk",
+			"spdif_aoclk",
+			"spdif_mclk",
+			"spdif_mclk_sel",
+			"audin_bufclk",
+			"audin_clk",
+			"adc_clk";
+
 		status = "okay";
 	};
 };
