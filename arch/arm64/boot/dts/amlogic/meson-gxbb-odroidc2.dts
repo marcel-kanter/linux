@@ -258,6 +258,9 @@ Copyright (c) 2021, Marcel Kanter <marcel.kanter@googlemail.com>
 			"audin_clk",
 			"adc_clk";
 
+		resets = <&reset RESET_AIU>, <&reset RESET_AUDIN>;
+		reset-names = "aiu", "audin";
+
 		status = "okay";
 	};
 };

@@ -4,6 +4,7 @@ Copyright (c) 2021 Marcel Kanter <marcel.kanter@googlemail.com>
 */
 #include <linux/module.h>
 #include <linux/of_device.h>
+#include <linux/reset.h>
 
 #include "gx-audio.h"
 
@@ -123,6 +124,43 @@ static int gx_audio_clocks_get(struct platform_device *pdev)
 }
 
 
+static int gx_audio_peripherals_reset(struct platform_device *pdev)
+{
+	int ret;
+	struct reset_control *rst_ctrl;
+
+	rst_ctrl = reset_control_get_exclusive(&pdev->dev, "aiu");
+	if (IS_ERR(rst_ctrl))
+	{
+		dev_err(&pdev->dev, "Failed to get reset control for AIU");
+		return PTR_ERR(rst_ctrl);
+	}
+	ret = reset_control_reset(rst_ctrl);
+	reset_control_put(rst_ctrl);
+	if (ret)
+	{
+		dev_err(&pdev->dev, "Failed to reset AIU");
+		return ret;
+	}
+
+	rst_ctrl = reset_control_get_exclusive(&pdev->dev, "audin");
+	if (IS_ERR(rst_ctrl))
+	{
+		dev_err(&pdev->dev, "Failed to get reset control for AUDIN");
+		return PTR_ERR(rst_ctrl);
+	}
+	ret = reset_control_reset(rst_ctrl);
+	reset_control_put(rst_ctrl);
+	if (ret)
+	{
+		dev_err(&pdev->dev, "Failed to reset AUDIN");
+		return ret;
+	}
+
+	return 0;
+}
+
+
 static int gx_audio_platform_probe(struct platform_device *pdev)
 {
 	int ret;
@@ -140,6 +178,12 @@ static int gx_audio_platform_probe(struct platform_device *pdev)
 	platform_set_drvdata(pdev, gx_audio);
 
 	ret = gx_audio_clocks_get(pdev);
+	if (ret)
+	{
+		return ret;
+	}
+
+	ret = gx_audio_peripherals_reset(pdev);
 	if (ret)
 	{
 		return ret;
