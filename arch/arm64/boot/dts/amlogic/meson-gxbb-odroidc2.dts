@@ -1,15 +1,16 @@
-// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+// SPDX-License-Identifier: GPL-2.0 OR MIT
 /*
- * Copyright (c) 2016 Andreas Färber
- * Copyright (c) 2016 BayLibre, Inc.
- * Author: Kevin Hilman <khilman@kernel.org>
- */
+Copyright (c) 2016 Andreas Färber
+Copyright (c) 2016 BayLibre, Inc.
+Author: Kevin Hilman <khilman@kernel.org>
+
+Copyright (c) 2021, Marcel Kanter <marcel.kanter@googlemail.com>
+*/
 
 /dts-v1/;
 
 #include "meson-gxbb.dtsi"
 #include <dt-bindings/gpio/gpio.h>
-#include <dt-bindings/sound/meson-aiu.h>
 
 / {
 	compatible = "hardkernel,odroid-c2", "amlogic,meson-gxbb";
@@ -222,45 +223,17 @@
 	};
 	sound {
 		compatible = "amlogic,gx-sound-card";
-		model = "GX-SOUND-CARD";
-		assigned-clocks = <&clkc CLKID_MPLL2>,
-				  <&clkc CLKID_MPLL1>,
-				  <&clkc CLKID_MPLL0>;
-		assigned-clock-parents = <0>, <0>, <0>;
-		assigned-clock-rates = <294912000>,
-			       <270950400>,
-				       <393216000>;
 		status = "okay";
-
-		dai-link-0 {
-			sound-dai = <&aiu AIU_CPU CPU_I2S_FIFO>;
-		};
-
-		dai-link-1 {
-			sound-dai = <&aiu AIU_CPU CPU_I2S_ENCODER>;
-			dai-format = "i2s";
-			mclk-fs = <256>;
-
-			codec-0 {
-				sound-dai = <&aiu AIU_HDMI CTRL_I2S>;
-			};
-			codec-1 {
-				sound-dai = <&pcm5102a>;
-			};
-		};
-
-		dai-link-2 {
-			sound-dai = <&aiu AIU_HDMI CTRL_OUT>;
-
-			codec-0 {
-				sound-dai = <&hdmi_tx>;
-			};
-		};
 	};
 };
 
-&aiu {
-	status = "okay";
+/delete-node/ &aiu;
+
+&{/soc} {
+	audio: audio-controller@c1105400 {
+		compatible = "amlogic,gx-audio";
+		status = "okay";
+	};
 };
 
 &cec_AO {
