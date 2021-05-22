@@ -212,6 +212,14 @@
 			};
 		};
 	};
+	pcm5102a: audio-codec-0 {
+		compatible = "ti,pcm5102a";
+		#sound-dai-cells = <0>;
+		sound-name-prefix = "PCM5102A";
+		pinctrl-0 = <&i2s_am_clk_pins>, <&i2s_out_ao_clk_pins>, <&i2s_out_lr_clk_pins>, <&i2s_out_ch01_ao_pins>;
+		pinctrl-names = "default";
+		status = "okay";
+	};
 	sound {
 		compatible = "amlogic,gx-sound-card";
 		model = "GX-SOUND-CARD";
@@ -235,6 +243,9 @@
 
 			codec-0 {
 				sound-dai = <&aiu AIU_HDMI CTRL_I2S>;
+			};
+			codec-1 {
+				sound-dai = <&pcm5102a>;
 			};
 		};
 
