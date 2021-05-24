@@ -268,6 +268,20 @@ Copyright (c) 2021, Marcel Kanter <marcel.kanter@googlemail.com>
 		interrupt-names = "i2s", "spdif", "audin";
 
 		status = "okay";
+
+		i2sfifo: i2sfifo {
+			compatible = "amlogic,gx-i2sfifo";
+			#sound-dai-cells = <0>;
+			sound-name-prefix = "I2SFIFO";
+			status = "okay";
+		};
+
+		i2s: i2s {
+			compatible = "amlogic,gx-i2s";
+			#sound-dai-cells = <0>;
+			sound-name-prefix = "I2S";
+			status = "okay";
+		};
 	};
 };
 
