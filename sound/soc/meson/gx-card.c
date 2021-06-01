@@ -7,9 +7,161 @@ Copyright (c) 2021 Marcel Kanter <marcel.kanter@googlemail.com>
 #include <sound/soc.h>
 
 
+static int gx_card_parse_dai(struct snd_soc_card *card, struct device_node *node, struct snd_soc_dai_link_component *component)
+{
+	int ret;
+	struct of_phandle_args args;
+	const char *name;
+
+	ret = of_parse_phandle_with_args(node, "sound-dai", "#sound-dai-cells", 0, &args);
+	if (ret)
+	{
+		dev_err(card->dev, "Failed to parse sound-dai property: %d", ret);
+		return ret;
+	}
+	component->of_node = args.np;
+
+	ret = snd_soc_get_dai_name(&args, &name);
+	if (ret)
+	{
+		if (ret == -EPROBE_DEFER)
+		{
+			dev_dbg(card->dev, "Failed to get dai name: %d", ret);
+		}
+		else
+		{
+			dev_err(card->dev, "Failed to get dai name: %d", ret);
+		}
+		return ret;
+	}
+
+	component->dai_name = devm_kstrdup(card->dev, name, GFP_KERNEL);
+	if (!component->dai_name)
+	{
+		dev_err(card->dev, "Failed to allocate memory for the dai name");
+		return -ENOMEM;
+	}
+
+	return 0;
+}
+
+
 static int gx_card_parse_link(struct snd_soc_card *card, struct device_node *node, struct snd_soc_dai_link *link)
 {
-	return 0;
+	int ret;
+	unsigned int num_cpus;
+	unsigned int num_codecs;
+	struct device_node *child;
+	struct snd_soc_dai_link_component *components;
+	unsigned int g;
+	unsigned int h;
+
+	num_cpus = 0;
+	num_codecs = 0;
+	for_each_child_of_node(node, child)
+	{
+		if (strncmp(child->name, "cpu", 3) == 0)
+		{
+			num_cpus++;
+		}
+		if (strncmp(child->name, "codec", 5) == 0)
+		{
+			num_codecs++;
+		}
+	}
+
+	if ((num_cpus == 0) && (num_codecs == 0))
+	{
+		dev_err(card->dev, "No components for link %s", node->full_name);
+		return -EINVAL;
+	}
+
+	// Keep space for the dummy components
+	if (num_cpus == 0)
+	{
+		link->num_cpus = 1;
+	}
+	else
+	{
+		link->num_cpus = num_cpus;
+	}
+	if (num_codecs == 0)
+	{
+		link->num_codecs = 1;
+	}
+	else
+	{
+		link->num_codecs = num_codecs;
+	}
+
+	components = devm_kcalloc(card->dev, link->num_cpus + link->num_codecs, sizeof(*components), GFP_KERNEL);
+	if (!components)
+	{
+		dev_err(card->dev, "Failed to allocate memory for the link components");
+		return -ENOMEM;
+	}
+
+	g = 0;
+	h = link->num_cpus;
+	link->cpus = &components[g];
+	link->codecs = &components[h];
+
+	for_each_child_of_node(node, child)
+	{
+		if (strncmp(child->name, "cpu", 3) == 0)
+		{
+			ret = gx_card_parse_dai(card, child, &components[g]);
+			if (ret)
+			{
+				goto error;
+			}
+			g++;
+		}
+		if (strncmp(child->name, "codec", 5) == 0)
+		{
+			ret = gx_card_parse_dai(card, child, &components[h]);
+			if (ret)
+			{
+				goto error;
+			}
+			h++;
+		}
+	}
+
+	if (num_cpus == 0)
+	{
+		link->cpus->name = "snd-soc-dummy";
+		link->cpus->dai_name = "snd-soc-dummy-dai";
+
+		link->no_pcm = 1;
+	}
+
+	if (num_codecs == 0)
+	{
+		link->codecs->name = "snd-soc-dummy";
+		link->codecs->dai_name = "snd-soc-dummy-dai";
+
+		link->dynamic = 1;
+	}
+	else
+	{
+		link->no_pcm = 1;
+		link->ignore_pmdown_time = 1;
+	}
+
+	snd_soc_dai_link_set_capabilities(link);
+
+	ret = of_property_read_string(node, "link-name", &link->name);
+	if (ret)
+	{
+		dev_err(card->dev, "Failed to get link name: %d", ret);
+		goto error;
+	}
+	link->stream_name = link->name;
+
+error:
+	of_node_put(child);
+	return ret;
 }
 
 
@@ -103,6 +255,13 @@ static int gx_card_platform_probe(struct platform_device *pdev)
 	ret = gx_card_parse_links(card);
 	if (ret)
 	{
+		return ret;
+	}
+
+	ret = devm_snd_soc_register_card(&pdev->dev, card);
+	if (ret)
+	{
+		dev_err(&pdev->dev, "Failed to register card: %d", ret);
 		return ret;
 	}
 
