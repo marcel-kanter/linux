@@ -227,6 +227,15 @@ Copyright (c) 2021, Marcel Kanter <marcel.kanter@googlemail.com>
 		compatible = "amlogic,gx-sound-card";
 		model = "gx-sound-card";
 		audio-routing = "I2S Playback", "I2SFIFO Playback";
+		assigned-clocks = <&clkc CLKID_MPLL2>,
+			<&clkc CLKID_MPLL1>,
+			<&clkc CLKID_MPLL0>;
+		assigned-clock-parents = <0>,
+			<0>,
+			<0>;
+		assigned-clock-rates = <294912000>,
+			<270950400>,
+			<393216000>;
 		status = "okay";
 
 		dai-link@0 {
