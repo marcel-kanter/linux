@@ -9,6 +9,7 @@ Copyright (c) 2021 Marcel Kanter <marcel.kanter@googlemail.com>
 #include <sound/soc.h>
 
 #include "gx-audio.h"
+#include "gx-aiu.h"
 
 
 #define GX_I2S_FIFO_BLOCK_SIZE 256
@@ -161,7 +162,14 @@ static void gx_i2sfifo_component_pcm_destruct(struct snd_soc_component *componen
 
 snd_pcm_uframes_t gx_i2sfifo_component_pointer(struct snd_soc_component *component, struct snd_pcm_substream *substream)
 {
-	return 0;
+	struct gx_audio *gx_audio;
+	unsigned int addr;
+
+	gx_audio = dev_get_drvdata(component->dev->parent);
+
+	regmap_read(gx_audio->aiu_regmap, AIU_MEM_I2S_RD_PTR, &addr);
+
+	return bytes_to_frames(substream->runtime, addr - (unsigned int)substream->runtime->dma_addr);
 }
 
 
@@ -179,6 +187,10 @@ static const struct snd_soc_component_driver gx_i2sfifo_component_driver = {
 
 static irqreturn_t gx_i2sfifo_handler(int irq, void *dev_id)
 {
+	struct snd_pcm_substream *playback = dev_id;
+
+	snd_pcm_period_elapsed(playback);
+
 	return IRQ_HANDLED;
 }
 
@@ -217,21 +229,92 @@ static void gx_i2sfifo_dai_shutdown(struct snd_pcm_substream *substream, struct 
 
 static int gx_i2sfifo_dai_prepare(struct snd_pcm_substream *substream, struct snd_soc_dai *dai)
 {
+	struct gx_audio *gx_audio;
+
 	dev_dbg(dai->dev, "gx_i2sfifo_dai_prepare");
+
+	gx_audio = dev_get_drvdata(dai->dev->parent);
+
+	regmap_update_bits(gx_audio->aiu_regmap, AIU_MEM_I2S_BUF_CNTL, AIU_MEM_I2S_BUF_CNTL_INIT, AIU_MEM_I2S_BUF_CNTL_INIT);
+	regmap_update_bits(gx_audio->aiu_regmap, AIU_MEM_I2S_BUF_CNTL, AIU_MEM_I2S_BUF_CNTL_INIT, 0);
+
 	return 0;
 }
 
 
 static int gx_i2sfifo_dai_trigger(struct snd_pcm_substream *substream, int cmd, struct snd_soc_dai *dai)
 {
+	struct gx_audio *gx_audio;
+	unsigned int value;
+	unsigned int enable;
+
 	dev_dbg(dai->dev, "gx_i2sfifo_dai_trigger");
+
+	gx_audio = dev_get_drvdata(dai->dev->parent);
+
+	switch (cmd)
+	{
+	case SNDRV_PCM_TRIGGER_START:
+	case SNDRV_PCM_TRIGGER_RESUME:
+	case SNDRV_PCM_TRIGGER_PAUSE_RELEASE:
+		regmap_write(gx_audio->aiu_regmap, AIU_RST_SOFT, AIU_RST_SOFT_I2S_FAST);
+		regmap_read(gx_audio->aiu_regmap, AIU_I2S_SYNC, &value);
+
+		enable = (AIU_MEM_I2S_CONTROL_FILL_EN | AIU_MEM_I2S_CONTROL_EMPTY_EN);
+		break;
+
+	case SNDRV_PCM_TRIGGER_SUSPEND:
+	case SNDRV_PCM_TRIGGER_PAUSE_PUSH:
+	case SNDRV_PCM_TRIGGER_STOP:
+		enable = 0;
+		break;
+
+	default:
+		return -EINVAL;
+	}
+
+	regmap_update_bits(gx_audio->aiu_regmap, AIU_MEM_I2S_CONTROL, AIU_MEM_I2S_CONTROL_FILL_EN | AIU_MEM_I2S_CONTROL_EMPTY_EN, enable);
+
 	return 0;
 }
 
 
 static int gx_i2sfifo_dai_hw_params(struct snd_pcm_substream *substream, struct snd_pcm_hw_params *params, struct snd_soc_dai *dai)
 {
+	struct gx_audio *gx_audio;
+	unsigned int value;
+
 	dev_dbg(dai->dev, "gx_i2sfifo_dai_hw_params");
+
+	gx_audio = dev_get_drvdata(dai->dev->parent);
+
+	snd_pcm_set_runtime_buffer(substream, &substream->dma_buffer);
+
+	regmap_write(gx_audio->aiu_regmap, AIU_MEM_I2S_START_PTR, substream->runtime->dma_addr);
+	regmap_write(gx_audio->aiu_regmap, AIU_MEM_I2S_RD_PTR, substream->runtime->dma_addr);
+	regmap_write(gx_audio->aiu_regmap, AIU_MEM_I2S_END_PTR, substream->runtime->dma_addr + params_buffer_bytes(params) - GX_I2S_FIFO_BLOCK_SIZE);
+
+	regmap_update_bits(gx_audio->aiu_regmap, AIU_MEM_I2S_MASKS, AIU_MEM_I2S_MASKS_READ | AIU_MEM_I2S_MASKS_MEMORY, FIELD_PREP(AIU_MEM_I2S_MASKS_READ, 0xff) | FIELD_PREP(AIU_MEM_I2S_MASKS_MEMORY, 0xff));
+
+	switch (params_physical_width(params))
+	{
+	case 16:
+		value = AIU_MEM_I2S_CONTROL_MODE_16BIT;
+		break;
+
+	case 32:
+		value = 0;
+		break;
+
+	default:
+		dev_err(dai->dev, "Unsupported physical width: %u", params_physical_width(params));
+		return -EINVAL;
+	}
+	regmap_update_bits(gx_audio->aiu_regmap, AIU_MEM_I2S_CONTROL, AIU_MEM_I2S_CONTROL_MODE_16BIT, value);
+
+	value = params_period_bytes(params) / GX_I2S_FIFO_BLOCK_SIZE;
+	regmap_update_bits(gx_audio->aiu_regmap, AIU_MEM_I2S_MASKS, AIU_MEM_I2S_MASKS_IRQ_BLOCK, FIELD_PREP(AIU_MEM_I2S_MASKS_IRQ_BLOCK, value));
+
 	return 0;
 }
 
