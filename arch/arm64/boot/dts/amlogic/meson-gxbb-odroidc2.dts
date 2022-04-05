@@ -1,9 +1,11 @@
-// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+// SPDX-License-Identifier: GPL-2.0 OR MIT
 /*
- * Copyright (c) 2016 Andreas Färber
- * Copyright (c) 2016 BayLibre, Inc.
- * Author: Kevin Hilman <khilman@kernel.org>
- */
+Copyright (c) 2016 Andreas Färber
+Copyright (c) 2016 BayLibre, Inc.
+Author: Kevin Hilman <khilman@kernel.org>
+
+Copyright (c) 2021, Marcel Kanter <marcel.kanter@googlemail.com>
+*/
 
 /dts-v1/;
 
@@ -186,6 +188,18 @@
 		};
 	};
 
+	soc {
+		audio: audio-controller@c1105400 {
+			compatible = "amlogic,gx-audio";
+			status = "okay";
+		};
+	};
+
+	sound {
+		compatible = "amlogic,gx-sound-card";
+		status = "okay";
+	};
+
 	pcm5102a: audio-codec-0 {
 		compatible = "ti,pcm5102a";
 		#sound-dai-cells = <0>;
@@ -195,6 +209,8 @@
 		status = "okay";
 	};
 };
+
+/delete-node/ &aiu;
 
 &cec_AO {
 	status = "okay";
