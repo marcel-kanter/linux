@@ -4,6 +4,7 @@ Copyright (c) 2021 Marcel Kanter <marcel.kanter@googlemail.com>
 */
 #include <linux/module.h>
 #include <linux/of_device.h>
+#include <linux/regmap.h>
 #include <linux/reset.h>
 
 #include "gx-audio.h"
@@ -161,6 +162,61 @@ static int gx_audio_peripherals_reset(struct platform_device *pdev)
 }
 
 
+static const struct regmap_config aiu_regmap_cfg = {
+	.name = "aiu",
+	.reg_bits = 32,
+	.val_bits = 32,
+	.reg_stride = 4,
+	.max_register = 0x2ac,
+};
+
+
+static const struct regmap_config audin_regmap_cfg = {
+	.name = "audin",
+	.reg_bits = 32,
+	.val_bits = 32,
+	.reg_stride = 4,
+	.max_register = 0x304,
+};
+
+
+static int gx_audio_regmap_init(struct platform_device *pdev)
+{
+	void __iomem *base;
+	struct gx_audio *gx_audio;
+
+	gx_audio = platform_get_drvdata(pdev);
+
+	base = devm_platform_ioremap_resource_byname(pdev, aiu_regmap_cfg.name);
+	if (IS_ERR(base))
+	{
+		dev_err(&pdev->dev, "Failed to remap AIU regmap: %ld", PTR_ERR(base));
+		return PTR_ERR(base);
+	}
+	gx_audio->aiu_regmap = devm_regmap_init_mmio(&pdev->dev, base, &aiu_regmap_cfg);
+	if (IS_ERR(gx_audio->aiu_regmap))
+	{
+		dev_err(&pdev->dev, "Failed to init AIU regmap: %ld", PTR_ERR(gx_audio->aiu_regmap));
+		return PTR_ERR(gx_audio->aiu_regmap);
+	}
+
+	base = devm_platform_ioremap_resource_byname(pdev, audin_regmap_cfg.name);
+	if (IS_ERR(base))
+	{
+		dev_err(&pdev->dev, "Failed to remap AUDIN regmap: %ld", PTR_ERR(base));
+		return PTR_ERR(base);
+	}
+	gx_audio->audin_regmap = devm_regmap_init_mmio(&pdev->dev, base, &audin_regmap_cfg);
+	if (IS_ERR(gx_audio->audin_regmap))
+	{
+		dev_err(&pdev->dev, "Failed to init AUDIN regmap: %ld", PTR_ERR(gx_audio->audin_regmap));
+		return PTR_ERR(gx_audio->audin_regmap);
+	}
+
+	return 0;
+}
+
+
 static int gx_audio_platform_probe(struct platform_device *pdev)
 {
 	int ret;
@@ -184,6 +240,12 @@ static int gx_audio_platform_probe(struct platform_device *pdev)
 	}
 
 	ret = gx_audio_peripherals_reset(pdev);
+	if (ret)
+	{
+		return ret;
+	}
+
+	ret = gx_audio_regmap_init(pdev);
 	if (ret)
 	{
 		return ret;
