@@ -32,14 +32,17 @@ struct gx_audio
 
 	struct clk_bulk_data *aiu_i2s_clocks;
 	unsigned int aiu_i2s_num_clocks;
+	int aiu_irq_i2s;
 
 	struct clk_bulk_data *aiu_spdif_clocks;
 	unsigned int aiu_spdif_num_clocks;
+	int aiu_irq_spdif;
 
 	struct regmap *audin_regmap;
 
 	struct clk_bulk_data *audin_clocks;
 	unsigned int audin_num_clocks;
+	int audin_irq_audin;
 };
 
 #endif

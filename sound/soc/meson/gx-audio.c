@@ -217,6 +217,37 @@ static int gx_audio_regmap_init(struct platform_device *pdev)
 }
 
 
+static int gx_audio_interrupts_get(struct platform_device *pdev)
+{
+	struct gx_audio *gx_audio;
+
+	gx_audio = platform_get_drvdata(pdev);
+
+	gx_audio->aiu_irq_i2s = platform_get_irq_byname(pdev, "i2s");
+	if (gx_audio->aiu_irq_i2s < 0)
+	{
+		dev_err(&pdev->dev, "Failed to get i2s interrupt: %d", gx_audio->aiu_irq_i2s);
+		return gx_audio->aiu_irq_i2s;
+	}
+
+	gx_audio->aiu_irq_spdif = platform_get_irq_byname(pdev, "spdif");
+	if (gx_audio->aiu_irq_spdif < 0)
+	{
+		dev_err(&pdev->dev, "Failed to get spdif interrupt: %d", gx_audio->aiu_irq_spdif);
+		return gx_audio->aiu_irq_spdif;
+	}
+
+	gx_audio->audin_irq_audin = platform_get_irq_byname(pdev, "audin");
+	if (gx_audio->audin_irq_audin < 0)
+	{
+		dev_err(&pdev->dev, "Failed to get audin interrupt: %d", gx_audio->audin_irq_audin);
+		return gx_audio->audin_irq_audin;
+	}
+
+	return 0;
+}
+
+
 static int gx_audio_platform_probe(struct platform_device *pdev)
 {
 	int ret;
@@ -246,6 +277,12 @@ static int gx_audio_platform_probe(struct platform_device *pdev)
 	}
 
 	ret = gx_audio_regmap_init(pdev);
+	if (ret)
+	{
+		return ret;
+	}
+
+	ret = gx_audio_interrupts_get(pdev);
 	if (ret)
 	{
 		return ret;
