@@ -288,6 +288,13 @@ static int gx_audio_platform_probe(struct platform_device *pdev)
 		return ret;
 	}
 
+	ret = of_platform_populate(pdev->dev.of_node, NULL, NULL, &pdev->dev);
+	if (ret)
+	{
+		dev_err(&pdev->dev, "Failed to populate the components: %d", ret);
+		return ret;
+	}
+
 	return 0;
 }
 
@@ -299,6 +306,8 @@ static int gx_audio_platform_remove(struct platform_device *pdev)
 	dev_dbg(&pdev->dev, "gx_audio_platform_remove");
 
 	gx_audio = platform_get_drvdata(pdev);
+
+	of_platform_depopulate(&pdev->dev);
 
 	clk_disable_unprepare(gx_audio->pclk);
 
