@@ -2,9 +2,12 @@
 /*
 Copyright (c) 2021 Marcel Kanter <marcel.kanter@googlemail.com>
 */
+#include <linux/clk.h>
 #include <linux/module.h>
 #include <linux/of_device.h>
 #include <sound/soc.h>
+
+#include "gx-audio.h"
 
 
 static int gx_i2s_component_probe(struct snd_soc_component *component)
@@ -45,14 +48,33 @@ static const struct snd_soc_component_driver gx_i2s_component_driver = {
 
 static int gx_i2s_dai_startup(struct snd_pcm_substream *substream, struct snd_soc_dai *dai)
 {
+	int ret;
+	struct gx_audio *gx_audio;
+
 	dev_dbg(dai->dev, "gx_i2s_dai_startup");
+
+	gx_audio = dev_get_drvdata(dai->dev->parent);
+
+	ret = clk_bulk_prepare_enable(gx_audio->aiu_i2s_num_clocks, gx_audio->aiu_i2s_clocks);
+	if (ret)
+	{
+		dev_err(dai->dev, "Failed to enable I2S clocks: %d", ret);
+		return ret;
+	}
+
 	return 0;
 }
 
 
 static void gx_i2s_dai_shutdown(struct snd_pcm_substream *substream, struct snd_soc_dai *dai)
 {
+	struct gx_audio *gx_audio;
+
 	dev_dbg(dai->dev, "gx_i2s_dai_shutdown");
+
+	gx_audio = dev_get_drvdata(dai->dev->parent);
+
+	clk_bulk_disable_unprepare(gx_audio->aiu_i2s_num_clocks, gx_audio->aiu_i2s_clocks);
 }
 
 
@@ -150,7 +172,7 @@ static int gx_i2s_platform_probe(struct platform_device *pdev)
 	ret = snd_soc_register_component(&pdev->dev, &gx_i2s_component_driver, gx_i2s_dai_driver, ARRAY_SIZE(gx_i2s_dai_driver));
 	if (ret)
 	{
-		dev_err(&pdev->dev, "Failed to register I2S component");
+		dev_err(&pdev->dev, "Failed to register I2S component: %d", ret);
 		return ret;
 	}
 

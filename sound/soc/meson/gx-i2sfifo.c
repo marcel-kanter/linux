@@ -8,16 +8,24 @@ Copyright (c) 2021 Marcel Kanter <marcel.kanter@googlemail.com>
 #include <sound/pcm_params.h>
 #include <sound/soc.h>
 
+#include "gx-audio.h"
+
 
 #define GX_I2S_FIFO_BLOCK_SIZE 256
 
 
 static struct snd_pcm_hardware gx_i2sfifo_pcm_hardware = {
+	.info = SNDRV_PCM_INFO_INTERLEAVED | SNDRV_PCM_INFO_MMAP | SNDRV_PCM_INFO_MMAP_VALID,
+	.formats = SNDRV_PCM_FMTBIT_S16_LE | SNDRV_PCM_FMTBIT_S24_LE,
+	.rates = SNDRV_PCM_RATE_8000_192000,
+	.channels_min = 2,
+	.channels_max = 8,
+	.buffer_bytes_max = GX_I2S_FIFO_BLOCK_SIZE * 32 * 64,
 	.period_bytes_min = GX_I2S_FIFO_BLOCK_SIZE,
 	.period_bytes_max = GX_I2S_FIFO_BLOCK_SIZE * 32,
 	.periods_min = 2,
 	.periods_max = 64,
-	.buffer_bytes_max = GX_I2S_FIFO_BLOCK_SIZE * 32 * 64,
+	.fifo_size = GX_I2S_FIFO_BLOCK_SIZE,
 };
 
 
@@ -36,7 +44,29 @@ static void gx_i2sfifo_component_remove(struct snd_soc_component *component)
 
 static int gx_i2sfifo_component_open(struct snd_soc_component *component, struct snd_pcm_substream *substream)
 {
+	int ret;
+
 	dev_dbg(component->dev, "gx_i2sfifo_component_open");
+
+	ret = snd_soc_set_runtime_hwparams(substream, &gx_i2sfifo_pcm_hardware);
+	if (ret)
+	{
+		dev_err(component->dev, "Failed to set hardware parameters: %d", ret);
+		return ret;
+	}
+
+	ret = snd_pcm_hw_constraint_step(substream->runtime, 0, SNDRV_PCM_HW_PARAM_BUFFER_BYTES, GX_I2S_FIFO_BLOCK_SIZE);
+	if (ret)
+	{
+		return ret;
+	}
+
+	ret = snd_pcm_hw_constraint_step(substream->runtime, 0, SNDRV_PCM_HW_PARAM_PERIOD_BYTES, GX_I2S_FIFO_BLOCK_SIZE);
+	if (ret)
+	{
+		return ret;
+	}
+
 	return 0;
 }
 
@@ -82,7 +112,7 @@ static int gx_i2sfifo_component_pcm_construct(struct snd_soc_component *componen
 	ret = dma_coerce_mask_and_coherent(card->dev, DMA_BIT_MASK(32));
 	if (ret)
 	{
-		dev_err(card->dev, "Setting DMA mask failed: %d", ret);
+		dev_err(card->dev, "Setting the DMA mask failed: %d", ret);
 		return ret;
 	}
 
@@ -91,7 +121,7 @@ static int gx_i2sfifo_component_pcm_construct(struct snd_soc_component *componen
 		ret = gx_i2sfifo_pcm_allocate_dma_buffer(rtd->pcm, SNDRV_PCM_STREAM_PLAYBACK);
 		if (ret)
 		{
-			dev_err(card->dev, "Preallocating DMA buffer failed: %d", ret);
+			dev_err(card->dev, "Allocating the DMA buffer failed: %d", ret);
 			return ret;
 		}
 	}
@@ -147,16 +177,41 @@ static const struct snd_soc_component_driver gx_i2sfifo_component_driver = {
 };
 
 
+static irqreturn_t gx_i2sfifo_handler(int irq, void *dev_id)
+{
+	return IRQ_HANDLED;
+}
+
+
 static int gx_i2sfifo_dai_startup(struct snd_pcm_substream *substream, struct snd_soc_dai *dai)
 {
+	int ret;
+	struct gx_audio *gx_audio;
+
 	dev_dbg(dai->dev, "gx_i2sfifo_dai_startup");
+
+	gx_audio = dev_get_drvdata(dai->dev->parent);
+
+	ret = request_irq(gx_audio->aiu_irq_i2s, gx_i2sfifo_handler, 0, dev_name(dai->dev), substream);
+	if (ret)
+	{
+		dev_err(dai->dev, "Failed to get interrupt: %d", ret);
+		return ret;
+	}
+
 	return 0;
 }
 
 
 static void gx_i2sfifo_dai_shutdown(struct snd_pcm_substream *substream, struct snd_soc_dai *dai)
 {
+	struct gx_audio *gx_audio;
+
 	dev_dbg(dai->dev, "gx_i2sfifo_dai_shutdown");
+
+	gx_audio = dev_get_drvdata(dai->dev->parent);
+
+	free_irq(gx_audio->aiu_irq_i2s, substream);
 }
 
 
@@ -230,7 +285,7 @@ static int gx_i2sfifo_platform_probe(struct platform_device *pdev)
 	ret = snd_soc_register_component(&pdev->dev, &gx_i2sfifo_component_driver, gx_i2sfifo_dai_driver, ARRAY_SIZE(gx_i2sfifo_dai_driver));
 	if (ret)
 	{
-		dev_err(&pdev->dev, "Failed to register I2SFIFO component");
+		dev_err(&pdev->dev, "Failed to register I2SFIFO component: %d", ret);
 		return ret;
 	}
 
