@@ -246,7 +246,28 @@ Copyright (c) 2021, Marcel Kanter <marcel.kanter@googlemail.com>
 
 	sound {
 		compatible = "amlogic,gx-sound-card";
+		model = "gx-sound-card";
+
+		audio-routing = "I2S Playback", "I2SFIFO Playback";
+
 		status = "okay";
+
+		dai-link@0 {
+			link-name = "I2SFIFO";
+			cpu {
+				sound-dai = <&i2sfifo>;
+			};
+		};
+
+		dai-link@1 {
+			link-name = "I2S<->PCM5102A";
+			cpu {
+				sound-dai = <&i2s>;
+			};
+			codec {
+				sound-dai = <&pcm5102a>;
+			};
+		};
 	};
 
 	pcm5102a: audio-codec-0 {
