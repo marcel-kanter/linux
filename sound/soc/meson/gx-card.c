@@ -46,6 +46,53 @@ static int gx_card_parse_dai(struct snd_soc_card *card, struct device_node *node
 }
 
 
+static int gx_card_parse_link_fmt(struct snd_soc_card *card, struct device_node *node, struct snd_soc_dai_link *link)
+{
+	unsigned int daifmt;
+	struct device_node *bitclkmaster = NULL;
+	struct device_node *framemaster = NULL;
+	int bcpu = 0;
+	int fcpu = 0;
+
+	daifmt = snd_soc_of_parse_daifmt(node, NULL, &bitclkmaster, &framemaster);
+	daifmt &= ~SND_SOC_DAIFMT_MASTER_MASK;
+
+	// Just check the beginning of the node's name as a short cut
+	if (bitclkmaster != NULL)
+	{
+		if (strncmp(bitclkmaster->name, "cpu", 3) == 0)
+		{
+			bcpu = 1;
+		}
+	}
+	if (framemaster != NULL)
+	{
+		if (strncmp(framemaster->name, "cpu", 3) == 0)
+		{
+			fcpu = 1;
+		}
+	}
+
+	// These is flags are design flaw in the soc core. The bitclock and frame master should be saved in the link as a reference to a dai.
+	// Then the clock setup of the dai in each driver does need not take care of the link, it would simply get a flag if this specific dai should provide clocks.
+	if (bitclkmaster == NULL || bcpu == 1)
+	{
+		daifmt |= (framemaster == NULL || fcpu == 1) ? SND_SOC_DAIFMT_CBS_CFS : SND_SOC_DAIFMT_CBS_CFM;
+	}
+	else
+	{
+		daifmt |= (framemaster == NULL || fcpu == 1) ? SND_SOC_DAIFMT_CBM_CFS : SND_SOC_DAIFMT_CBM_CFM;
+	}
+
+	of_node_put(bitclkmaster);
+	of_node_put(framemaster);
+
+	link->dai_fmt = daifmt;
+
+	return 0;
+}
+
+
 static int gx_card_link_startup(struct snd_pcm_substream *substream)
 {
 	dev_dbg(substream->pcm->card->dev, "gx_card_link_startup");
@@ -200,9 +247,18 @@ static int gx_card_parse_link(struct snd_soc_card *card, struct device_node *nod
 		link->codecs->dai_name = "snd-soc-dummy-dai";
 
 		link->dynamic = 1;
+		link->dpcm_merged_format = 1;
+		link->dpcm_merged_chan = 1;
+		link->dpcm_merged_rate = 1;
 	}
 	else
 	{
+		ret = gx_card_parse_link_fmt(card, node, link);
+		if (ret)
+		{
+			goto error;
+		}
+
 		link->no_pcm = 1;
 		link->ignore_pmdown_time = 1;
 
