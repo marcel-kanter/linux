@@ -108,8 +108,31 @@ static int gx_i2s_dai_hw_free(struct snd_pcm_substream *substream, struct snd_so
 
 static int gx_i2s_dai_set_sysclk(struct snd_soc_dai *dai, int clk_id, unsigned int freq, int dir)
 {
+	int ret;
+	struct gx_audio *gx_audio;
+
 	dev_dbg(dai->dev, "gx_i2s_dai_set_sysclk");
-	return 0;
+
+	gx_audio = dev_get_drvdata(dai->dev->parent);
+
+	if (clk_id != 0)
+	{
+		dev_err(dai->dev, "Unsupported clock id: %d", clk_id);
+		return -EINVAL;
+	}
+
+	if (dir != SND_SOC_CLOCK_OUT)
+	{
+		return 0;
+	}
+
+	ret = clk_set_rate(gx_audio->aiu_i2s_clocks[AIU_CLK_I2S_MCLK].clk, freq);
+	if (ret)
+	{
+		dev_err(dai->dev, "Failed to set sysclk to %uHz: %d", freq, ret);
+	}
+
+	return ret;
 }
 
 

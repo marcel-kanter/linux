@@ -46,6 +46,64 @@ static int gx_card_parse_dai(struct snd_soc_card *card, struct device_node *node
 }
 
 
+static int gx_card_link_startup(struct snd_pcm_substream *substream)
+{
+	dev_dbg(substream->pcm->card->dev, "gx_card_link_startup");
+	return 0;
+}
+
+
+static int gx_card_link_hw_params(struct snd_pcm_substream *substream, struct snd_pcm_hw_params *params)
+{
+	struct snd_soc_pcm_runtime *rtd;
+	unsigned int mclk;
+	struct snd_soc_dai *dai;
+	int i, ret;
+
+	dev_dbg(substream->pcm->card->dev, "gx_card_link_hw_params");
+
+	rtd = asoc_substream_to_rtd(substream);
+	if (rtd == NULL)
+	{
+		dev_err(substream->pcm->card->dev, "Failed to get runtime");
+		return -ENODEV;
+	}
+
+	mclk = params_rate(params) * 256;
+
+	for_each_rtd_codec_dais(rtd, i, dai)
+	{
+		ret = snd_soc_dai_set_sysclk(dai, 0, mclk, SND_SOC_CLOCK_IN);
+		if (ret && (ret != -ENOTSUPP))
+		{
+			return ret;
+		}
+	}
+
+	ret = snd_soc_dai_set_sysclk(asoc_rtd_to_cpu(rtd, 0), 0, mclk, SND_SOC_CLOCK_OUT);
+	if (ret && (ret != -ENOTSUPP))
+	{
+		return ret;
+	}
+
+	return 0;
+}
+
+
+static void gx_card_link_shutdown(struct snd_pcm_substream *substream)
+{
+	dev_dbg(substream->pcm->card->dev, "gx_card_link_shutdown");
+}
+
+
+static struct snd_soc_ops gx_card_link_ops =
+{
+	.startup = gx_card_link_startup,
+	.hw_params = gx_card_link_hw_params,
+	.shutdown = gx_card_link_shutdown,
+};
+
+
 static int gx_card_parse_link(struct snd_soc_card *card, struct device_node *node, struct snd_soc_dai_link *link)
 {
 	int ret;
@@ -147,6 +205,8 @@ static int gx_card_parse_link(struct snd_soc_card *card, struct device_node *nod
 	{
 		link->no_pcm = 1;
 		link->ignore_pmdown_time = 1;
+
+		link->ops = &gx_card_link_ops;
 	}
 
 	snd_soc_dai_link_set_capabilities(link);
