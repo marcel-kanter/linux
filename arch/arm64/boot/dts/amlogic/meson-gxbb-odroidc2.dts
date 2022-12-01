@@ -290,6 +290,13 @@ Copyright (c) 2021, Marcel Kanter <marcel.kanter@googlemail.com>
 		pinctrl-names = "default";
 		status = "okay";
 	};
+
+	inmp441: audio-codec-1 {
+		compatible = "invensense,inmp441";
+		#sound-dai-cells = <0>;
+		sound-name-prefix = "INMP441";
+		status = "okay";
+	};
 };
 
 /delete-node/ &aiu;

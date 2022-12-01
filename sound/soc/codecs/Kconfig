@@ -98,6 +98,7 @@ config SND_SOC_ALL_CODECS
 	imply SND_SOC_HDAC_HDMI
 	imply SND_SOC_HDAC_HDA
 	imply SND_SOC_ICS43432
+	imply SND_SOC_INMP441
 	imply SND_SOC_INNO_RK3036
 	imply SND_SOC_ISABELLE
 	imply SND_SOC_JZ4740_CODEC
@@ -810,6 +811,9 @@ config SND_SOC_HDAC_HDA
 
 config SND_SOC_ICS43432
 	tristate
+
+config SND_SOC_INMP441
+	tristate "InvenSense INMP441 microphone"
 
 config SND_SOC_INNO_RK3036
 	tristate "Inno codec driver for RK3036 SoC"
