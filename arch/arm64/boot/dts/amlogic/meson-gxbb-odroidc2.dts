@@ -262,14 +262,14 @@ Copyright (c) 2021, Marcel Kanter <marcel.kanter@googlemail.com>
 
 		status = "okay";
 
-		dai-link@0 {
+		dai-link-0 {
 			link-name = "I2SFIFO";
 			cpu {
 				sound-dai = <&i2sfifo>;
 			};
 		};
 
-		dai-link@1 {
+		dai-link-1 {
 			link-name = "I2S<->PCM5102A";
 			dai-format = "i2s";
 			mclk-fs = <256>;
