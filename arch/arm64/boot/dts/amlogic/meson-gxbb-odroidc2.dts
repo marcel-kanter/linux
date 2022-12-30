@@ -235,10 +235,10 @@ Copyright (c) 2021, Marcel Kanter <marcel.kanter@googlemail.com>
 				status = "okay";
 			};
 
-			i2s: i2s {
-				compatible = "amlogic,gx-i2s";
+			i2sout: i2sout {
+				compatible = "amlogic,gx-i2sout";
 				#sound-dai-cells = <0>;
-				sound-name-prefix = "I2S";
+				sound-name-prefix = "I2SOUT";
 				status = "okay";
 			};
 		};
@@ -248,7 +248,7 @@ Copyright (c) 2021, Marcel Kanter <marcel.kanter@googlemail.com>
 		compatible = "amlogic,gx-sound-card";
 		model = "gx-sound-card";
 
-		audio-routing = "I2S Playback", "I2SFIFO Playback";
+		audio-routing = "I2SOUT Playback", "I2SFIFO Playback";
 
 		assigned-clocks = <&clkc CLKID_MPLL2>,
 			<&clkc CLKID_MPLL1>,
@@ -270,11 +270,11 @@ Copyright (c) 2021, Marcel Kanter <marcel.kanter@googlemail.com>
 		};
 
 		dai-link-1 {
-			link-name = "I2S<->PCM5102A";
+			link-name = "I2SOUT<->PCM5102A";
 			dai-format = "i2s";
 			mclk-fs = <256>;
 			cpu {
-				sound-dai = <&i2s>;
+				sound-dai = <&i2sout>;
 			};
 			codec {
 				sound-dai = <&pcm5102a>;

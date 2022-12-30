@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0 OR MIT
 /*
-Copyright (c) 2021 Marcel Kanter <marcel.kanter@googlemail.com>
+Copyright (c) 2021 - 2022 Marcel Kanter <marcel.kanter@googlemail.com>
 */
 #include <linux/clk.h>
 #include <linux/module.h>
@@ -12,62 +12,62 @@ Copyright (c) 2021 Marcel Kanter <marcel.kanter@googlemail.com>
 #include "gx-aiu.h"
 
 
-static int gx_i2s_component_probe(struct snd_soc_component *component)
+static int gx_i2sout_component_probe(struct snd_soc_component *component)
 {
-	dev_dbg(component->dev, "gx_i2s_component_probe");
+	dev_dbg(component->dev, "gx_i2sout_component_probe");
 	return 0;
 }
 
 
-static void gx_i2s_component_remove(struct snd_soc_component *component)
+static void gx_i2sout_component_remove(struct snd_soc_component *component)
 {
-	dev_dbg(component->dev, "gx_i2s_component_remove");
+	dev_dbg(component->dev, "gx_i2sout_component_remove");
 }
 
 
-static int gx_i2s_component_open(struct snd_soc_component *component, struct snd_pcm_substream *substream)
+static int gx_i2sout_component_open(struct snd_soc_component *component, struct snd_pcm_substream *substream)
 {
-	dev_dbg(component->dev, "gx_i2s_component_open");
+	dev_dbg(component->dev, "gx_i2sout_component_open");
 	return 0;
 }
 
 
-static int gx_i2s_component_close(struct snd_soc_component *component, struct snd_pcm_substream *substream)
+static int gx_i2sout_component_close(struct snd_soc_component *component, struct snd_pcm_substream *substream)
 {
-	dev_dbg(component->dev, "gx_i2s_component_close");
+	dev_dbg(component->dev, "gx_i2sout_component_close");
 	return 0;
 }
 
 
-static const struct snd_soc_component_driver gx_i2s_component_driver = {
-	.name = "I2S",
-	.probe = gx_i2s_component_probe,
-	.remove = gx_i2s_component_remove,
-	.open = gx_i2s_component_open,
-	.close = gx_i2s_component_close,
+static const struct snd_soc_component_driver gx_i2sout_component_driver = {
+	.name = "I2SOUT",
+	.probe = gx_i2sout_component_probe,
+	.remove = gx_i2sout_component_remove,
+	.open = gx_i2sout_component_open,
+	.close = gx_i2sout_component_close,
 };
 
 
-static const unsigned int gx_i2s_dai_channels[] = {2, 8};
+static const unsigned int gx_i2sout_dai_channels[] = {2, 8};
 
 
-static const struct snd_pcm_hw_constraint_list gx_i2s_dai_channel_constraints = {
-	.list = gx_i2s_dai_channels,
-	.count = ARRAY_SIZE(gx_i2s_dai_channels),
+static const struct snd_pcm_hw_constraint_list gx_i2sout_dai_channel_constraints = {
+	.list = gx_i2sout_dai_channels,
+	.count = ARRAY_SIZE(gx_i2sout_dai_channels),
 	.mask = 0,
 };
 
 
-static int gx_i2s_dai_startup(struct snd_pcm_substream *substream, struct snd_soc_dai *dai)
+static int gx_i2sout_dai_startup(struct snd_pcm_substream *substream, struct snd_soc_dai *dai)
 {
 	int ret;
 	struct gx_audio *gx_audio;
 
-	dev_dbg(dai->dev, "gx_i2s_dai_startup");
+	dev_dbg(dai->dev, "gx_i2sout_dai_startup");
 
 	gx_audio = dev_get_drvdata(dai->dev->parent);
 
-	ret = snd_pcm_hw_constraint_list(substream->runtime, 0, SNDRV_PCM_HW_PARAM_CHANNELS, &gx_i2s_dai_channel_constraints);
+	ret = snd_pcm_hw_constraint_list(substream->runtime, 0, SNDRV_PCM_HW_PARAM_CHANNELS, &gx_i2sout_dai_channel_constraints);
 	if (ret)
 	{
 		dev_err(dai->dev, "Adding channel constraints failed: %u", ret);
@@ -85,11 +85,11 @@ static int gx_i2s_dai_startup(struct snd_pcm_substream *substream, struct snd_so
 }
 
 
-static void gx_i2s_dai_shutdown(struct snd_pcm_substream *substream, struct snd_soc_dai *dai)
+static void gx_i2sout_dai_shutdown(struct snd_pcm_substream *substream, struct snd_soc_dai *dai)
 {
 	struct gx_audio *gx_audio;
 
-	dev_dbg(dai->dev, "gx_i2s_dai_shutdown");
+	dev_dbg(dai->dev, "gx_i2sout_dai_shutdown");
 
 	gx_audio = dev_get_drvdata(dai->dev->parent);
 
@@ -97,11 +97,11 @@ static void gx_i2s_dai_shutdown(struct snd_pcm_substream *substream, struct snd_
 }
 
 
-static int gx_i2s_dai_prepare(struct snd_pcm_substream *substream, struct snd_soc_dai *dai)
+static int gx_i2sout_dai_prepare(struct snd_pcm_substream *substream, struct snd_soc_dai *dai)
 {
 	struct gx_audio *gx_audio;
 
-	dev_dbg(dai->dev, "gx_i2s_dai_prepare");
+	dev_dbg(dai->dev, "gx_i2sout_dai_prepare");
 
 	gx_audio = dev_get_drvdata(dai->dev->parent);
 
@@ -112,12 +112,12 @@ static int gx_i2s_dai_prepare(struct snd_pcm_substream *substream, struct snd_so
 }
 
 
-static int gx_i2s_dai_trigger(struct snd_pcm_substream *substream, int cmd, struct snd_soc_dai *dai)
+static int gx_i2sout_dai_trigger(struct snd_pcm_substream *substream, int cmd, struct snd_soc_dai *dai)
 {
 	struct gx_audio *gx_audio;
 	unsigned int hold;
 
-	dev_dbg(dai->dev, "gx_i2s_dai_trigger");
+	dev_dbg(dai->dev, "gx_i2sout_dai_trigger");
 
 	gx_audio = dev_get_drvdata(dai->dev->parent);
 
@@ -145,14 +145,14 @@ static int gx_i2s_dai_trigger(struct snd_pcm_substream *substream, int cmd, stru
 }
 
 
-static int gx_i2s_dai_hw_params(struct snd_pcm_substream *substream, struct snd_pcm_hw_params *params, struct snd_soc_dai *dai)
+static int gx_i2sout_dai_hw_params(struct snd_pcm_substream *substream, struct snd_pcm_hw_params *params, struct snd_soc_dai *dai)
 {
 	int ret;
 	struct gx_audio *gx_audio;
 	unsigned int value;
 	unsigned int fs, bs;
 
-	dev_dbg(dai->dev, "gx_i2s_dai_hw_params");
+	dev_dbg(dai->dev, "gx_i2sout_dai_hw_params");
 
 	gx_audio = dev_get_drvdata(dai->dev->parent);
 
@@ -223,12 +223,12 @@ static int gx_i2s_dai_hw_params(struct snd_pcm_substream *substream, struct snd_
 }
 
 
-static int gx_i2s_dai_hw_free(struct snd_pcm_substream *substream, struct snd_soc_dai *dai)
+static int gx_i2sout_dai_hw_free(struct snd_pcm_substream *substream, struct snd_soc_dai *dai)
 {
 	int ret;
 	struct gx_audio *gx_audio;
 
-	dev_dbg(dai->dev, "gx_i2s_dai_hw_free");
+	dev_dbg(dai->dev, "gx_i2sout_dai_hw_free");
 
 	gx_audio = dev_get_drvdata(dai->dev->parent);
 
@@ -243,12 +243,12 @@ static int gx_i2s_dai_hw_free(struct snd_pcm_substream *substream, struct snd_so
 }
 
 
-static int gx_i2s_dai_set_sysclk(struct snd_soc_dai *dai, int clk_id, unsigned int freq, int dir)
+static int gx_i2sout_dai_set_sysclk(struct snd_soc_dai *dai, int clk_id, unsigned int freq, int dir)
 {
 	int ret;
 	struct gx_audio *gx_audio;
 
-	dev_dbg(dai->dev, "gx_i2s_dai_set_sysclk");
+	dev_dbg(dai->dev, "gx_i2sout_dai_set_sysclk");
 
 	gx_audio = dev_get_drvdata(dai->dev->parent);
 
@@ -273,45 +273,45 @@ static int gx_i2s_dai_set_sysclk(struct snd_soc_dai *dai, int clk_id, unsigned i
 }
 
 
-static int gx_i2s_dai_set_fmt(struct snd_soc_dai *dai, unsigned int fmt)
+static int gx_i2sout_dai_set_fmt(struct snd_soc_dai *dai, unsigned int fmt)
 {
-	dev_dbg(dai->dev, "gx_i2s_dai_set_fmt");
+	dev_dbg(dai->dev, "gx_i2sout_dai_set_fmt");
 	return 0;
 }
 
 
-static const struct snd_soc_dai_ops gx_i2s_dai_ops = {
-	.startup = gx_i2s_dai_startup,
-	.shutdown = gx_i2s_dai_shutdown,
-	.prepare = gx_i2s_dai_prepare,
-	.trigger = gx_i2s_dai_trigger,
-	.hw_params = gx_i2s_dai_hw_params,
-	.hw_free = gx_i2s_dai_hw_free,
-	.set_sysclk = gx_i2s_dai_set_sysclk,
-	.set_fmt = gx_i2s_dai_set_fmt,
+static const struct snd_soc_dai_ops gx_i2sout_dai_ops = {
+	.startup = gx_i2sout_dai_startup,
+	.shutdown = gx_i2sout_dai_shutdown,
+	.prepare = gx_i2sout_dai_prepare,
+	.trigger = gx_i2sout_dai_trigger,
+	.hw_params = gx_i2sout_dai_hw_params,
+	.hw_free = gx_i2sout_dai_hw_free,
+	.set_sysclk = gx_i2sout_dai_set_sysclk,
+	.set_fmt = gx_i2sout_dai_set_fmt,
 };
 
 
-static int gx_i2s_dai_probe(struct snd_soc_dai *dai)
+static int gx_i2sout_dai_probe(struct snd_soc_dai *dai)
 {
-       dev_dbg(dai->dev, "gx_i2s_dai_probe");
+       dev_dbg(dai->dev, "gx_i2sout_dai_probe");
        return 0;
 }
 
 
-static int gx_i2s_dai_remove(struct snd_soc_dai *dai)
+static int gx_i2sout_dai_remove(struct snd_soc_dai *dai)
 {
-       dev_dbg(dai->dev, "gx_i2s_dai_remove");
+       dev_dbg(dai->dev, "gx_i2sout_dai_remove");
        return 0;
 }
 
 
-static struct snd_soc_dai_driver gx_i2s_dai_driver[] = {
+static struct snd_soc_dai_driver gx_i2sout_dai_driver[] = {
 	{
-		.name = "I2S",
-		.probe = gx_i2s_dai_probe,
-		.remove = gx_i2s_dai_remove,
-		.ops = &gx_i2s_dai_ops,
+		.name = "I2SOUT",
+		.probe = gx_i2sout_dai_probe,
+		.remove = gx_i2sout_dai_remove,
+		.ops = &gx_i2sout_dai_ops,
 		.playback = {
 			.stream_name = "Playback",
 			.channels_min = 2,
@@ -323,16 +323,16 @@ static struct snd_soc_dai_driver gx_i2s_dai_driver[] = {
 };
 
 
-static int gx_i2s_platform_probe(struct platform_device *pdev)
+static int gx_i2sout_platform_probe(struct platform_device *pdev)
 {
 	int ret;
 
-	dev_dbg(&pdev->dev, "gx_i2s_platform_probe");
+	dev_dbg(&pdev->dev, "gx_i2sout_platform_probe");
 
-	ret = snd_soc_register_component(&pdev->dev, &gx_i2s_component_driver, gx_i2s_dai_driver, ARRAY_SIZE(gx_i2s_dai_driver));
+	ret = snd_soc_register_component(&pdev->dev, &gx_i2sout_component_driver, gx_i2sout_dai_driver, ARRAY_SIZE(gx_i2sout_dai_driver));
 	if (ret)
 	{
-		dev_err(&pdev->dev, "Failed to register I2S component: %d", ret);
+		dev_err(&pdev->dev, "Failed to register I2SOUT component: %d", ret);
 		return ret;
 	}
 
@@ -340,9 +340,9 @@ static int gx_i2s_platform_probe(struct platform_device *pdev)
 }
 
 
-static int gx_i2s_platform_remove(struct platform_device *pdev)
+static int gx_i2sout_platform_remove(struct platform_device *pdev)
 {
-	dev_dbg(&pdev->dev, "gx_i2s_platform_remove");
+	dev_dbg(&pdev->dev, "gx_i2sout_platform_remove");
 
 	snd_soc_unregister_component(&pdev->dev);
 
@@ -350,24 +350,24 @@ static int gx_i2s_platform_remove(struct platform_device *pdev)
 }
 
 
-static const struct of_device_id gx_i2s_of_match[] = {
-	{ .compatible = "amlogic,gx-i2s" },
+static const struct of_device_id gx_i2sout_of_match[] = {
+	{ .compatible = "amlogic,gx-i2sout" },
 	{ }
 };
-MODULE_DEVICE_TABLE(of, gx_i2s_of_match);
+MODULE_DEVICE_TABLE(of, gx_i2sout_of_match);
 
 
-static struct platform_driver gx_i2s_platform_driver = {
+static struct platform_driver gx_i2sout_platform_driver = {
 	.driver = {
-		.name = "gx-i2s",
-		.of_match_table = gx_i2s_of_match,
+		.name = "gx-i2sout",
+		.of_match_table = gx_i2sout_of_match,
 	},
-	.probe = gx_i2s_platform_probe,
-	.remove = gx_i2s_platform_remove,
+	.probe = gx_i2sout_platform_probe,
+	.remove = gx_i2sout_platform_remove,
 };
-module_platform_driver(gx_i2s_platform_driver);
+module_platform_driver(gx_i2sout_platform_driver);
 
 
-MODULE_DESCRIPTION("Amlogic GX I2S audio driver");
+MODULE_DESCRIPTION("Amlogic GX I2S output audio driver");
 MODULE_AUTHOR("Marcel Kanter <marcel.kanter@googlemail.com>");
 MODULE_LICENSE("Dual MIT/GPL");
