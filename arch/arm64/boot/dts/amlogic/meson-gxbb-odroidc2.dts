@@ -241,6 +241,12 @@ Copyright (c) 2021, Marcel Kanter <marcel.kanter@googlemail.com>
 				sound-name-prefix = "I2SOUT";
 				status = "okay";
 			};
+
+			toddr: toddr {
+				compatible = "amlogic,gx-toddr";
+				#sound-dai-cells = <1>;
+				status = "okay";
+			};
 		};
 	};
 
@@ -270,6 +276,13 @@ Copyright (c) 2021, Marcel Kanter <marcel.kanter@googlemail.com>
 		};
 
 		dai-link-1 {
+			link-name = "TODDR0";
+			cpu {
+				sound-dai = <&toddr 0>;
+			};
+		};
+
+		dai-link-a {
 			link-name = "I2SOUT<->PCM5102A";
 			dai-format = "i2s";
 			mclk-fs = <256>;
