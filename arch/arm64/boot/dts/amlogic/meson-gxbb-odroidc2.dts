@@ -247,6 +247,13 @@ Copyright (c) 2021, Marcel Kanter <marcel.kanter@googlemail.com>
 				#sound-dai-cells = <1>;
 				status = "okay";
 			};
+
+			i2sin: i2sin {
+				compatible = "amlogic,gx-i2sin";
+				#sound-dai-cells = <0>;
+				sound-name-prefix = "I2SIN";
+				status = "okay";
+			};
 		};
 	};
 
@@ -254,7 +261,8 @@ Copyright (c) 2021, Marcel Kanter <marcel.kanter@googlemail.com>
 		compatible = "amlogic,gx-sound-card";
 		model = "gx-sound-card";
 
-		audio-routing = "I2SOUT Playback", "I2SFIFO Playback";
+		audio-routing = "I2SOUT Playback", "I2SFIFO Playback",
+			"TODDR0 Capture", "I2SIN Capture";
 
 		assigned-clocks = <&clkc CLKID_MPLL2>,
 			<&clkc CLKID_MPLL1>,
@@ -291,6 +299,18 @@ Copyright (c) 2021, Marcel Kanter <marcel.kanter@googlemail.com>
 			};
 			codec {
 				sound-dai = <&pcm5102a>;
+			};
+		};
+
+		dai-link-b {
+			link-name = "I2SIN<->INMP441";
+			dai-format = "i2s";
+			mclk-fs = <256>;
+			cpu {
+				sound-dai = <&i2sin>;
+			};
+			codec {
+				sound-dai = <&inmp441>;
 			};
 		};
 	};
