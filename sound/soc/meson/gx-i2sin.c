@@ -8,6 +8,8 @@ Copyright (c) 2021 - 2023 Marcel Kanter <marcel.kanter@googlemail.com>
 #include <sound/pcm_params.h>
 #include <sound/soc.h>
 
+#include "gx-audio.h"
+
 
 static int gx_i2sin_component_probe(struct snd_soc_component *component)
 {
@@ -45,16 +47,59 @@ static const struct snd_soc_component_driver gx_i2sin_component_driver = {
 };
 
 
+static const unsigned int gx_i2sin_dai_channels[] = {1, 2, 8};
+
+
+static const struct snd_pcm_hw_constraint_list gx_i2sin_dai_channel_constraints = {
+	.list = gx_i2sin_dai_channels,
+	.count = ARRAY_SIZE(gx_i2sin_dai_channels),
+};
+
+
 static int gx_i2sin_dai_startup(struct snd_pcm_substream *substream, struct snd_soc_dai *dai)
 {
+	int ret;
+	struct gx_audio *gx_audio;
+
 	dev_dbg(dai->dev, "gx_i2sin_dai_startup");
+
+	gx_audio = dev_get_drvdata(dai->dev->parent);
+
+	ret = snd_pcm_hw_constraint_list(substream->runtime, 0, SNDRV_PCM_HW_PARAM_CHANNELS, &gx_i2sin_dai_channel_constraints);
+	if (ret)
+	{
+		dev_err(dai->dev, "Adding channel constraints failed: %u", ret);
+		return ret;
+	}
+
+	ret = clk_bulk_prepare_enable(gx_audio->audin_num_clocks, gx_audio->audin_clocks);
+	if (ret)
+	{
+		dev_err(dai->dev, "Failed to enable AUDIN clocks: %d", ret);
+		return ret;
+	}
+
+	ret = clk_bulk_prepare_enable(gx_audio->aiu_i2s_num_clocks, gx_audio->aiu_i2s_clocks);
+	if (ret)
+	{
+		dev_err(dai->dev, "Failed to enable I2S clocks: %d", ret);
+		return ret;
+	}
+
 	return 0;
 }
 
 
 static void gx_i2sin_dai_shutdown(struct snd_pcm_substream *substream, struct snd_soc_dai *dai)
 {
+	struct gx_audio *gx_audio;
+
 	dev_dbg(dai->dev, "gx_i2sin_dai_shutdown");
+
+	gx_audio = dev_get_drvdata(dai->dev->parent);
+
+	clk_bulk_disable_unprepare(gx_audio->audin_num_clocks, gx_audio->audin_clocks);
+	clk_bulk_disable_unprepare(gx_audio->aiu_i2s_num_clocks, gx_audio->aiu_i2s_clocks);
 }
 
 
@@ -88,7 +133,31 @@ static int gx_i2sin_dai_hw_free(struct snd_pcm_substream *substream, struct snd_
 
 static int gx_i2sin_dai_set_sysclk(struct snd_soc_dai *dai, int clk_id, unsigned int freq, int dir)
 {
+	int ret;
+	struct gx_audio *gx_audio;
+
 	dev_dbg(dai->dev, "gx_i2sin_dai_set_sysclk");
+
+	gx_audio = dev_get_drvdata(dai->dev->parent);
+
+	if (clk_id != 0)
+	{
+		dev_err(dai->dev, "Unsupported clock id: %d", clk_id);
+		return -EINVAL;
+	}
+
+	if (dir != SND_SOC_CLOCK_OUT)
+	{
+		return -EINVAL;
+	}
+
+	ret = clk_set_rate(gx_audio->aiu_i2s_clocks[AIU_CLK_I2S_MCLK].clk, freq);
+	if (ret)
+	{
+		dev_err(dai->dev, "Failed to set sysclk to %uHz: %d", freq, ret);
+		return ret;
+	}
+
 	return 0;
 }
 

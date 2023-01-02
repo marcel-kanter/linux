@@ -8,6 +8,9 @@ Copyright (c) 2022 - 2023 Marcel Kanter <marcel.kanter@googlemail.com>
 #include <sound/pcm_params.h>
 #include <sound/soc.h>
 
+#include "gx-audio.h"
+#include "gx-audin.h"
+
 
 #define GX_TODDR_FIFO_SIZE 512
 
@@ -42,7 +45,29 @@ static void gx_toddr_component_remove(struct snd_soc_component *component)
 
 static int gx_toddr_component_open(struct snd_soc_component *component, struct snd_pcm_substream *substream)
 {
+	int ret;
+
 	dev_dbg(component->dev, "gx_toddr_component_open");
+
+	ret = snd_soc_set_runtime_hwparams(substream, &gx_toddr_pcm_hardware);
+	if (ret)
+	{
+		dev_err(component->dev, "Failed to set hardware parameters: %d", ret);
+		return ret;
+	}
+
+	ret = snd_pcm_hw_constraint_step(substream->runtime, 0, SNDRV_PCM_HW_PARAM_BUFFER_BYTES, GX_TODDR_FIFO_SIZE);
+	if (ret)
+	{
+		return ret;
+	}
+
+	ret = snd_pcm_hw_constraint_step(substream->runtime, 0, SNDRV_PCM_HW_PARAM_PERIOD_BYTES, GX_TODDR_FIFO_SIZE);
+	if (ret)
+	{
+		return ret;
+	}
+
 	return 0;
 }
 
@@ -153,16 +178,47 @@ static const struct snd_soc_component_driver gx_toddr_component_driver = {
 };
 
 
+static irqreturn_t gx_audin_handler(int irq, void *dev_id)
+{
+	return IRQ_HANDLED;
+}
+
+
 static int gx_toddr_dai_startup(struct snd_pcm_substream *substream, struct snd_soc_dai *dai)
 {
+	int ret;
+	struct gx_audio *gx_audio;
+
 	dev_dbg(dai->dev, "gx_toddr_dai_startup");
+
+	gx_audio = dev_get_drvdata(dai->dev->parent);
+
+	// Disable address match interrupt until hardware is configured
+	regmap_update_bits(gx_audio->audin_regmap, AUDIN_INT_CTRL, AUDIN_INT_CTRL_FIFO0_ADDRESS, 0);
+
+	ret = request_irq(gx_audio->audin_irq_audin, gx_audin_handler, 0, dev_name(dai->dev), substream);
+	if (ret)
+	{
+		dev_err(dai->dev, "Failed to get interrupt: %d", ret);
+		return ret;
+	}
+
 	return 0;
 }
 
 
 static void gx_toddr_dai_shutdown(struct snd_pcm_substream *substream, struct snd_soc_dai *dai)
 {
+	struct gx_audio *gx_audio;
+
 	dev_dbg(dai->dev, "gx_toddr_dai_shutdown");
+
+	gx_audio = dev_get_drvdata(dai->dev->parent);
+
+	// Disable address match interrupt
+	regmap_update_bits(gx_audio->audin_regmap, AUDIN_INT_CTRL, AUDIN_INT_CTRL_FIFO0_ADDRESS, 0);
+
+	free_irq(gx_audio->audin_irq_audin, substream);
 }
 
 

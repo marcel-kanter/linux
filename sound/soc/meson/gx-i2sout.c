@@ -260,16 +260,17 @@ static int gx_i2sout_dai_set_sysclk(struct snd_soc_dai *dai, int clk_id, unsigne
 
 	if (dir != SND_SOC_CLOCK_OUT)
 	{
-		return 0;
+		return -EINVAL;
 	}
 
 	ret = clk_set_rate(gx_audio->aiu_i2s_clocks[AIU_CLK_I2S_MCLK].clk, freq);
 	if (ret)
 	{
 		dev_err(dai->dev, "Failed to set sysclk to %uHz: %d", freq, ret);
+		return ret;
 	}
 
-	return ret;
+	return 0;
 }
 
 
