@@ -543,10 +543,7 @@ Copyright (c) 2021, Marcel Kanter <marcel.kanter@googlemail.com>
 
 &usb0 {
 	status = "okay";
-	dr_mode = "otg";
-	g-rx-fifo-size = <128>;
-	g-np-tx-fifo-size = <128>;
-	g-tx-fifo-size = <128 128 16 16 16>;
+	dr_mode = "host";
 	vbus-supply = <&usb_otg_pwr>;
 };
 
