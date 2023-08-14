@@ -30,16 +30,110 @@ static struct snd_pcm_hardware gx_toddr_pcm_hardware = {
 };
 
 
+static const char *gx_toddr_mux_texts[] = {"SPDIF", "I2S", "PCM"};
+
+
+static const struct soc_enum gx_toddr_mux_enum = SOC_ENUM_SINGLE(SND_SOC_NOPM, 0, ARRAY_SIZE(gx_toddr_mux_texts), gx_toddr_mux_texts);
+
+
+static int gx_toddr_mux_get(struct snd_kcontrol *kcontrol, struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_component *component = snd_soc_dapm_kcontrol_component(kcontrol);
+	struct snd_soc_dapm_context *dapm = snd_soc_dapm_kcontrol_dapm(kcontrol);
+	struct snd_soc_card *card = dapm->card;
+	struct gx_audio *gx_audio;
+	unsigned int value;
+
+	dev_dbg(card->dev, "gx_toddr_mux_get");
+
+	gx_audio = dev_get_drvdata(component->dev->parent);
+
+	regmap_read(gx_audio->audin_regmap, AUDIN_FIFO0_CTRL0, &value);
+	ucontrol->value.enumerated.item[0] = FIELD_GET(AUDIN_FIFO0_CTRL0_DIN_SEL, value);
+
+	return 0;
+}
+
+
+static int gx_toddr_mux_put(struct snd_kcontrol *kcontrol, struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_component *component = snd_soc_dapm_kcontrol_component(kcontrol);
+	struct snd_soc_dapm_context *dapm = snd_soc_dapm_kcontrol_dapm(kcontrol);
+	struct snd_soc_card *card = dapm->card;
+	struct soc_enum *e = (struct soc_enum *)kcontrol->private_value;
+	struct gx_audio *gx_audio;
+	unsigned int mux, value;
+
+	dev_dbg(card->dev, "gx_toddr_mux_put");
+
+	gx_audio = dev_get_drvdata(component->dev->parent);
+
+	mux = snd_soc_enum_item_to_val(e, ucontrol->value.enumerated.item[0]);
+
+	regmap_read(gx_audio->audin_regmap, AUDIN_FIFO0_CTRL0, &value);
+
+	if (FIELD_GET(AUDIN_FIFO0_CTRL0_DIN_SEL, value) != mux)
+	{
+		regmap_update_bits(gx_audio->audin_regmap, AUDIN_FIFO0_CTRL0, AUDIN_FIFO0_CTRL0_DIN_SEL, FIELD_PREP(AUDIN_FIFO0_CTRL0_DIN_SEL, mux));
+		return snd_soc_dapm_mux_update_power(dapm, kcontrol, mux, e, NULL);
+	}
+	else
+	{
+		return 0;
+	}
+}
+
+
+static const struct snd_kcontrol_new gx_toddr_controls[] = {
+	SOC_DAPM_ENUM_EXT("TODDR0 Source", gx_toddr_mux_enum, gx_toddr_mux_get, gx_toddr_mux_put),
+};
+
+
+static const struct snd_soc_dapm_widget gx_toddr_dapm_widgets[] = {
+	SND_SOC_DAPM_AIF_IN("TODDR SPDIF", NULL, 0, SND_SOC_NOPM, 0, 0),
+	SND_SOC_DAPM_AIF_IN("TODDR I2S", NULL, 0, SND_SOC_NOPM, 0, 0),
+	SND_SOC_DAPM_AIF_IN("TODDR PCM", NULL, 0, SND_SOC_NOPM, 0, 0),
+	SND_SOC_DAPM_MUX("TODDR0 Source", SND_SOC_NOPM, 0, 0, &gx_toddr_controls[0]),
+};
+
+
+static const struct snd_soc_dapm_route gx_toddr_dapm_routes[] = {
+	{"TODDR0 Capture", NULL, "TODDR0 Source"},
+	{"TODDR0 Source", "SPDIF", "TODDR SPDIF"},
+	{"TODDR0 Source", "I2S", "TODDR I2S"},
+	{"TODDR0 Source", "PCM", "TODDR PCM"},
+};
+
+
 static int gx_toddr_component_probe(struct snd_soc_component *component)
 {
+	int ret;
+	struct gx_audio *gx_audio;
+
 	dev_dbg(component->dev, "gx_toddr_component_probe");
+
+	gx_audio = dev_get_drvdata(component->dev->parent);
+
+	ret = clk_prepare_enable(gx_audio->audin_clocks[AUDIN_CLK_AUDIN_CLK].clk);
+	if (ret)
+	{
+		dev_err(component->dev, "Failed to enable peripheral clock");
+		return ret;
+	}
+
 	return 0;
 }
 
 
 static void gx_toddr_component_remove(struct snd_soc_component *component)
 {
+	struct gx_audio *gx_audio;
+
 	dev_dbg(component->dev, "gx_toddr_component_remove");
+
+	gx_audio = dev_get_drvdata(component->dev->parent);
+
+	clk_disable_unprepare(gx_audio->audin_clocks[AUDIN_CLK_AUDIN_CLK].clk);
 }
 
 
@@ -168,6 +262,10 @@ snd_pcm_uframes_t gx_toddr_component_pointer(struct snd_soc_component *component
 
 static const struct snd_soc_component_driver gx_toddr_component_driver = {
 	.name = "TODDR",
+	.dapm_widgets = gx_toddr_dapm_widgets,
+	.num_dapm_widgets = ARRAY_SIZE(gx_toddr_dapm_widgets),
+	.dapm_routes = gx_toddr_dapm_routes,
+	.num_dapm_routes = ARRAY_SIZE(gx_toddr_dapm_routes),
 	.probe = gx_toddr_component_probe,
 	.remove = gx_toddr_component_remove,
 	.open = gx_toddr_component_open,

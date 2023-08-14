@@ -262,7 +262,7 @@ Copyright (c) 2021, Marcel Kanter <marcel.kanter@googlemail.com>
 		model = "gx-sound-card";
 
 		audio-routing = "I2SOUT Playback", "I2SFIFO Playback",
-			"TODDR0 Capture", "I2SIN Capture";
+			"TODDR I2S", "I2SIN Capture";
 
 		assigned-clocks = <&clkc CLKID_MPLL2>,
 			<&clkc CLKID_MPLL1>,
